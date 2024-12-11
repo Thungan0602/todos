@@ -29,27 +29,36 @@ const darkThemeIcon = `<svg viewBox="0 0 24 24" fill="none" class="w-6 h-6">
         class="fill-sky-500"></path>
     </svg>`
 
-    const todos = JSON.parse(localStorage.getItem("todos")) || [];// get data tu localstorage (bien dich tu JSON thanh array khi dl bi undefine thi se tra ve rong)
+    let todos = JSON.parse(localStorage.getItem("todos")) || [];// get data tu localstorage (bien dich tu JSON thanh array khi dl bi undefine thi se tra ve rong)
     
     let isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
-function getCountLeft() {
-  // return todos.reduce((acc, todo) => (todo.completed ? acc : acc + 1), 0);
-  let count = list.children.length;
-  for (let i = 0; i < list.children.length; i++) {
-    if (list.children[i].classList.contains("line-through")) {
-       count--;
+
+    async function fetchTodos() {
+      const res = await fetch("https://671331cf6c5f5ced6625a04f.mockapi.io/current/todos",);
+
+      const data = await res.json();
+      return data;
     }
-  }
-  return count;  
+
+
+    function getCountLeft() {
+  return todos.reduce((acc, todo) => (todo.completed ? acc : acc + 1), 0);
+  // let count = list.children.length;
+  // for (let i = 0; i < list.children.length; i++) {
+  //   if (list.children[i].classList.contains("line-through")) {
+  //      count--;
+  //   }
+  // }
+  // return count;  
 }
 
-function createTodoItem({text}) {
+function createTodoItem({text, completed}) {
   const li = document.createElement("li");
   li.className ="p-[15px] border-b border-[#e6e6e6] flex items-center group"
   li.insertAdjacentHTML (
   "afterbegin",
-  `<div data-todo="toggle" class="mr-[15px] size-10 h-10 rounded-full border flex justify-center items-center ">
-    <svg class=" hidden text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
+  `<div data-todo="toggle" class="mr-[15px] size-10 h-10 rounded-full border ${completed ? "border-green-500" : ""} flex justify-center items-center ">
+    <svg class=" ${completed ? "" : "hidden"} text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
   </div>
   ${text}
   <svg data-todo= "delete"  class="cursor-pointer ml-auto hidden group-hover:block " xmlns="http://www.w3.org/2000/svg" width="24" height="24"
@@ -76,7 +85,7 @@ const toggleTheme = (isDarkModeToChange) => {
 };
 
 
-const renderApp = () => {
+const renderApp = async () => {
   const hash = window.location.hash;
   const filter = document.getElementById("filter");
   
@@ -177,5 +186,9 @@ toggleThemeEl.onclick = () => {
 };
 
 
-renderApp();
+fetchTodos().then((data) => {
+  todos = data;
+  renderApp();
+});  
+
 window.addEventListener("hashchange", renderApp);
