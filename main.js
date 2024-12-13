@@ -1,6 +1,53 @@
+//------------APIS------------
+async function fetchTodos() {
+  const res = await fetch("https://671331cf6c5f5ced6625a04f.mockapi.io/current/todos",);
+
+  const data = await res.json();
+  return data;
+}
+
+
+async function createTodo(todo) {
+  const res = await fetch("https://671331cf6c5f5ced6625a04f.mockapi.io/current/todos",
+    {
+      method: "POST",
+      body: JSON.stringify(todo),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  const data = await res.json();
+  return data;
+}
+
+async function deleteTodo(todoId) {
+  const res = await fetch(`https://671331cf6c5f5ced6625a04f.mockapi.io/current/todos/${todoId}`,
+    {
+      method: "DELETE",
+    },
+  );
+  const data = await res.json();
+  return data;
+}
+
+async function toggleTodo(todoId, completed) {
+  const res = await fetch(`https://671331cf6c5f5ced6625a04f.mockapi.io/current/todos/${todoId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ completed }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  const data = await res.json();
+  return data;
+}
 tailwind.config = {
   darkMode: "class",
 };
+//------------APIS------------
 
 const input = document.getElementById("input");
 const id = document.getElementById("list");
@@ -29,19 +76,11 @@ const darkThemeIcon = `<svg viewBox="0 0 24 24" fill="none" class="w-6 h-6">
         class="fill-sky-500"></path>
     </svg>`
 
-    let todos = JSON.parse(localStorage.getItem("todos")) || [];// get data tu localstorage (bien dich tu JSON thanh array khi dl bi undefine thi se tra ve rong)
-    
-    let isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
+// let todos = JSON.parse(localStorage.getItem("todos")) || [];// get data tu localstorage (bien dich tu JSON thanh array khi dl bi undefine thi se tra ve rong)
+let todos = [];
+let isDarkMode = JSON.parse(localStorage.getItem("isDarkMode")) || false;
 
-    async function fetchTodos() {
-      const res = await fetch("https://671331cf6c5f5ced6625a04f.mockapi.io/current/todos",);
-
-      const data = await res.json();
-      return data;
-    }
-
-
-    function getCountLeft() {
+function getCountLeft() {
   return todos.reduce((acc, todo) => (todo.completed ? acc : acc + 1), 0);
   // let count = list.children.length;
   // for (let i = 0; i < list.children.length; i++) {
@@ -52,12 +91,12 @@ const darkThemeIcon = `<svg viewBox="0 0 24 24" fill="none" class="w-6 h-6">
   // return count;  
 }
 
-function createTodoItem({text, completed}) {
+function createTodoItem({ text, completed, id }) {
   const li = document.createElement("li");
-  li.className ="p-[15px] border-b border-[#e6e6e6] flex items-center group"
-  li.insertAdjacentHTML (
-  "afterbegin",
-  `<div data-todo="toggle" class="mr-[15px] size-10 h-10 rounded-full border ${completed ? "border-green-500" : ""} flex justify-center items-center ">
+  li.className = "p-[15px] border-b border-[#e6e6e6] flex items-center group"
+  li.insertAdjacentHTML(
+    "afterbegin",
+    `<div data-todo="toggle" class="mr-[15px] size-10 h-10 rounded-full border ${completed ? "border-green-500" : ""} flex justify-center items-center ">
     <svg class=" ${completed ? "" : "hidden"} text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><path d="M20 6 9 17l-5-5"/></svg>
   </div>
   ${text}
@@ -67,9 +106,10 @@ function createTodoItem({text, completed}) {
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
   </svg>`,
-);
-return li;
-} 
+  );
+  li.setAttribute("data-id", id);    // set id cho thẻ li trên DOM
+  return li;
+}
 
 const toggleTheme = (isDarkModeToChange) => {
   if (isDarkModeToChange) {
@@ -88,17 +128,27 @@ const toggleTheme = (isDarkModeToChange) => {
 const renderApp = async () => {
   const hash = window.location.hash;
   const filter = document.getElementById("filter");
-  
+
   for (const el of filter.children) {
     if (el.matches(`[href="${hash}"]`)) {
       el.classList.add("border");
     } else {
-    el.classList.remove("border");
+      el.classList.remove("border");
     }
   }
-  
-  list.replaceChildren(...todos.map((todo) => createTodoItem(todo)));
-  
+
+  const filteredTodos = todos.filter((todo) => {
+    if (hash === "#/active") {
+      return !todo.completed;
+    } 
+    if (hash === "#/completed") {
+      return todo.completed;
+    }
+    return true;
+  });
+
+  list.replaceChildren(...filteredTodos.map((todo) => createTodoItem(todo)));
+
   counter.innerHTML = `${getCountLeft()} items left`;
 
   toggleTheme(isDarkMode);
@@ -110,74 +160,88 @@ const renderApp = async () => {
       </svg>`;
     toggle.innerHTML = toggleAllEl;
 
-      const toggleAll = document.getElementById("toggle-all");      // Lúc này svg toggle mới xuất hiện nên bắt sk onclick ở đây        
-      toggleAll.onclick = () => {
-        const isAllChecked = Array.from(list.children).every((el) => 
-          el.classList.contains("line-through")
+    const toggleAll = document.getElementById("toggle-all");      // Lúc này svg toggle mới xuất hiện nên bắt sk onclick ở đây        
+    toggleAll.onclick = () => {
+      const isAllChecked = Array.from(list.children).every((el) =>
+        el.classList.contains("line-through")
       );
 
-        if (isAllChecked) {
-          for (const el of list.children) {
-            el.classList.remove("line-through");
-            el.querySelector("div").classList.remove("border-green-500");
-            el.querySelector("svg").classList.add("hidden");
-          }
-
-          return;
-
+      if (isAllChecked) {
+        for (const el of list.children) {
+          el.classList.remove("line-through");
+          el.querySelector("div").classList.remove("border-green-500");
+          el.querySelector("svg").classList.add("hidden");
         }
 
-        for (const el of list.children) {
-          if (!el.classList.contains("line-through")) {
-            el.classList.add("line-through");
-            el.querySelector("div").classList.add("border-green-500");
-            el.querySelector("svg").classList.remove("hidden");
+        return;
+
+      }
+
+      for (const el of list.children) {
+        if (!el.classList.contains("line-through")) {
+          el.classList.add("line-through");
+          el.querySelector("div").classList.add("border-green-500");
+          el.querySelector("svg").classList.remove("hidden");
         }
       }
       counter.innerHTML = `${getCountLeft()} items left`;
-      };
-    
-    
-        input.classList.remove(["shadow-2xl"]); 
+    };
+
+
+    input.classList.remove(["shadow-2xl"]);
     footer.classList.remove(["hidden"]);
   }
-  };
+};
 
-input.onkeyup = e => {
-  if (e.key === 'Enter') {  
+input.onkeyup = async (e) => {
+  if (e.key === 'Enter') {
+    const todo = await createTodo({
+      text: input.value,
+      completed: false
+    });
+
+
     todos.push({
+      id: todo.id,
       text: input.value,
       completed: false,
     });
-    localStorage.setItem("todos", JSON.stringify(todos)); // set data vao localstorage ( bien dich tu array ve JOSON vi cai localstorage no k accept dl dang array)
+    // localStorage.setItem("todos", JSON.stringify(todos)); // set data vao localstorage ( bien dich tu array ve JOSON vi cai localstorage no k accept dl dang array)
 
     input.value = "";
-  renderApp();
+    renderApp();
   }
-  
-  
+
+
 };
-  
-list.onclick = e => {
+
+list.onclick = async (e) => {
   if (e.target.getAttribute("data-todo") === "delete") {
-    e.target.parentElement.remove();
+    const id = e.target.parentElement.getAttribute("data-id");
+    await deleteTodo(id);  // xóa trên database
+    todos = todos.filter((todo) => todo.id !== id); // xóa ở UI
+    renderApp();
   }
 
   if (e.target.getAttribute("data-todo") === "toggle") {
-    e.target.parentElement.classList.toggle(["line-through"]);
-    e.target.classList.toggle("border-green-500");
-    e.target.querySelector("svg").classList.toggle("hidden");
+    const id = e.target.parentElement.getAttribute("data-id");
+    const todo = todos.find((todo) => todo.id === id);
+    await toggleTodo(id, !todo.completed);
+    todos = todos.map((todo) => 
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+    );
+    renderApp();
   }
   counter.innerHTML = `${getCountLeft()} items left`;
-}; 
+};
 
 
-clearCompleted.onclick = () => {
-  Array.from(list.children).forEach(el => {
-    if (el.classList.contains("line-through")) {
-      el.remove();
-    }
-  });
+clearCompleted.onclick = async() => {
+  await Promise.all( // xóa tất cả cùng 1 lúc
+    todos.filter((todo) => todo.completed).map((todo) => deleteTodo(todo.id)),
+  );
+  todos = todos.filter((todo) => !todo.completed);
+  renderApp();
 };
 
 
@@ -189,6 +253,6 @@ toggleThemeEl.onclick = () => {
 fetchTodos().then((data) => {
   todos = data;
   renderApp();
-});  
+});
 
 window.addEventListener("hashchange", renderApp);
